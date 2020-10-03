@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.852
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{49C31274-D21A-46AC-8DBC-EB8741E5504C}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RIO", "src\RIO\RIO.csproj", "{B10AFDA5-46CE-451E-9019-2A765296CDA7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{8232C720-F3EB-4C9C-9C21-685F1F1ECDC4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "test1", "test\test1\test1.csproj", "{16F17665-2489-4996-B6B9-B9AB2C59458A}"
 EndProject
@@ -24,6 +28,10 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{B10AFDA5-46CE-451E-9019-2A765296CDA7} = {49C31274-D21A-46AC-8DBC-EB8741E5504C}
+		{16F17665-2489-4996-B6B9-B9AB2C59458A} = {8232C720-F3EB-4C9C-9C21-685F1F1ECDC4}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0B7AA38F-C406-4DBD-989E-5018238546FE}
