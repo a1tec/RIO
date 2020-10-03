@@ -20,11 +20,11 @@ namespace RIO.Models
         /// <summary>
         /// Gets or sets rawData.
         /// </summary>
-        public string RawData { get; set; }
+        public string RawData { get; private set; }
 
         /// <summary>
         /// Gets or sets bitCount.
         /// </summary>
-        public int BitCount { get; set; }
+        public int BitCount { get; private set; }
     }
 }

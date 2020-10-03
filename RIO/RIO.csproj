@@ -42,7 +42,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Api.cs" />
-    <Compile Include="Models\RioMessage.cs" />
     <Compile Include="Models\Credential.cs" />
     <Compile Include="Models\Door.cs" />
     <Compile Include="Classes\Heartbeat.cs" />

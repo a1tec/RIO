@@ -64,41 +64,44 @@ namespace RIO
         /// <summary>
         /// Synchronously log on to Genetec Synergis Softwire.
         /// </summary>
-        public void LogOn()
+        public bool LogOn()
         {
             var request = new RestRequest("/Login", Method.POST);
             request.AddHeader("content-type", "application/xml");
             request.AddHeader("cache-control", "no-cache");
             request.AddParameter("application/xml", $"username={this.username}&password={this.password}", ParameterType.RequestBody);
 
-            //return Execute<Response>(request);
-
             IRestResponse response = client.Execute(request);
 
-            if (response.ErrorException != null)
-            {
-                const string message = "Error retrieving response.  Check inner details for more info.";
-                throw new Exception(message, response.ErrorException);
-            }
-
-            if (response.Content == RioMessage.LoginSuccessful)
+            if (response.StatusCode == HttpStatusCode.OK && response.Content == "Login successful")
             {
                 IsConnected = true;
+
+                return true;
             }
+
+            throw new Exception(response.Content);
+
+            return false;
         }
 
-        //public T Execute<T>(RestRequest request) where T : new()
-        //{
-        //    var response = client.Execute<T>(request);
+        public T Execute<T>(RestRequest request) where T : new()
+        {
+            var response = client.Execute<T>(request);
 
-        //    if (response.ErrorException != null)
-        //    {
-        //        const string message = "Error retrieving response.  Check inner details for more info.";
-        //        throw new Exception(message, response.ErrorException);
-        //    }
+            if (response.StatusCode == HttpStatusCode.Found)
+            {
+                this.IsConnected = false;
+                throw new Exception("Must login to synergis first.");
+            }
 
-        //    return response.Data;
-        //}
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                return response.Data;
+            }
+
+            throw new Exception(response.Content);
+        }
 
         /// <summary>
         /// Reports a card swipe.
@@ -110,54 +113,30 @@ namespace RIO
         /// /// <exception cref="ArgumentNullException"><paramref name="credential"/> is null.</exception>
         public bool ReportCardSwipe(Door door, Credential credential)
         {
-            if (door == null)
-            {
-                throw new ArgumentNullException(nameof(door));
-            }
-
-            if (credential == null)
-            {
-                throw new ArgumentNullException(nameof(credential));
-            }
+            var message = $"<Request><BusUpdate><CardSwipe><Interface>{door.Interface}</Interface>" +
+                   $"<Reader>{door.Reader}</Reader><BitCount>{credential.BitCount}</BitCount>" +
+                   $"<CardCode>{credential.RawData}</CardCode></CardSwipe></BusUpdate></Request>";
 
             var request = new RestRequest($"/ExternalIntegrations/{door.Channel}/Update", Method.POST);
             request.AddHeader("content-type", "application/xml");
             request.AddHeader("cache-control", "no-cache");
-
-            var message = $"<Request><BusUpdate><CardSwipe><Interface>{door.Interface}</Interface>" +
-                $"<Reader>{door.Reader}</Reader><BitCount>{credential.BitCount}</BitCount>" +
-                $"<CardCode>{credential.RawData}</CardCode></CardSwipe></BusUpdate></Request>";
-
             request.AddParameter("application/xml", message, ParameterType.RequestBody);
 
-            request.XmlSerializer = new RestSharp.Serializers.DotNetXmlSerializer(); //NEW
+            var response = Execute<RioResponse>(request);
 
-            var response = this.client.Execute<RioResponse>(request);
-
-            
-
-            if (response.StatusCode == HttpStatusCode.OK && response.Content == RioMessage.OK)
+            if (response.Response == "OK")
             {
-                Console.WriteLine(response.Data.Response);
                 return true;
             }
 
-            if (response.StatusCode == HttpStatusCode.Found)
-            {
-                IsConnected = false;
-                throw new Exception("Must log in");
-                //LogOn();
-                //ReportCardSwipe(door, credential);
-            }
-
-            throw new Exception(response.Content);
+            return false;
         }
 
-        public bool ReportOfflineAccess(Door door, Credential credential, DateTime timestamp, bool isGranted)
+        public bool ReportOfflineAccess(Door door, Credential credential, DateTime timestampUTC, bool isGranted)
         {
             string message = $"<Request><BusUpdate><OfflineDecision><Interface>{door.Interface}</Interface>" +
                 $"<Reader>{door.Reader}</Reader>" +
-                $"<Timestamp>{timestamp.ToString("yyyy-MM-ddTHH:mm:ss")}</Timestamp>" +
+                $"<Timestamp>{timestampUTC.ToString("yyyy-MM-ddTHH:mm:ss")}</Timestamp>" +
                 $"<Card><Some><BitCount>{credential.BitCount}</BitCount><CardCode>{credential.RawData}</CardCode>" +
                 $"</Some></Card><Granted>{isGranted}</Granted></OfflineDecision></BusUpdate></Request>";
 
@@ -165,16 +144,12 @@ namespace RIO
             request.AddHeader("content-type", "application/xml");
             request.AddHeader("cache-control", "no-cache");
             request.AddParameter("application/xml", message, ParameterType.RequestBody);
-            var response = this.client.Execute(request);
 
-            if (response.StatusCode == HttpStatusCode.OK && response.Content == RioMessage.OK)
+            var response = Execute<RioResponse>(request);
+
+            if (response.Response == "OK")
             {
                 return true;
-            }
-
-            if (response.StatusCode == HttpStatusCode.Found)
-            {
-                this.IsConnected = false;
             }
 
             return false;
@@ -182,90 +157,61 @@ namespace RIO
 
         public bool SetInterfaceOnline(string channel, string @interface)
         {
-            this.client.ClearHandlers();
-            this.client.UseDotNetXmlSerializer();
+            var message = $"<Request><BusUpdate><SetConnected><Interface>{@interface}</Interface>" +
+                "<IsConnected>True</IsConnected><SpecificDevices><None /></SpecificDevices>" +
+                "</SetConnected></BusUpdate></Request>";
 
             var request = new RestRequest($"/ExternalIntegrations/{channel}/Update", Method.POST);
             request.AddHeader("content-type", "application/xml");
             request.AddHeader("cache-control", "no-cache");
-            var message = $"<Request><BusUpdate><SetConnected><Interface>{@interface}</Interface>" +
-                "<IsConnected>True</IsConnected><SpecificDevices><None /></SpecificDevices>" +
-                "</SetConnected></BusUpdate></Request>";
             request.AddParameter("application/xml", message, ParameterType.RequestBody);
-            request.RequestFormat = DataFormat.Xml;
-            //var response = this.client.Execute(request);
 
-            //request.XmlSerializer = new RestSharp.Serializers.DotNetXmlSerializer() { RootElement = "Response" }; //NEW            
-            //request.RootElement = "Response";
+            var response = Execute<RioResponse>(request);
 
-            var response = this.client.Execute<RioResponse>(request);
-            
-
-            if (response.StatusCode == HttpStatusCode.OK)
+            if (response.Response == "OK")
             {
-                Console.WriteLine($"ContentType: {response.ContentType}");
-                //Console.WriteLine("Content: " + response.Content);
-                Console.WriteLine("Respuesta: " + response.Data.Response);
-
                 return true;
             }
-
-            if (response.StatusCode == HttpStatusCode.Found)
-            {
-                this.IsConnected = false;
-            }
-
-            throw new Exception(response.Content);
 
             return false;
         }
 
         public bool SetInterfaceOffline(string channel, string @interface)
         {
+            var message = $"<Request><BusUpdate><SetConnected><Interface>{@interface}</Interface>" +
+                   $"<IsConnected>False</IsConnected><SpecificDevices><None /></SpecificDevices>" +
+                   $"</SetConnected></BusUpdate></Request>";
+
             var request = new RestRequest($"/ExternalIntegrations/{channel}/Update", Method.POST);
             request.AddHeader("content-type", "application/xml");
             request.AddHeader("cache-control", "no-cache");
-            var message = $"<Request><BusUpdate><SetConnected><Interface>{@interface}</Interface>" +
-                $"<IsConnected>False</IsConnected><SpecificDevices><None /></SpecificDevices>" +
-                $"</SetConnected></BusUpdate></Request>";
             request.AddParameter("application/xml", message, ParameterType.RequestBody);
-            var response = this.client.Execute(request);
 
-            if (response.StatusCode == HttpStatusCode.OK && response.Content == RioMessage.OK)
+            var response = Execute<RioResponse>(request);
+
+            if (response.Response == "OK")
             {
                 return true;
             }
-
-            if (response.StatusCode == HttpStatusCode.Found)
-            {
-                this.IsConnected = false;
-            }
-
-            throw new Exception(response.Content);
 
             return false;
         }
 
         public bool SendKeepAlive(string channel, string duration)
         {
-            var request = new RestRequest("/ExternalIntegrations/" + channel + "/Update", Method.POST);
-            request.AddHeader("content-type", "application/xml");
-            request.AddHeader("cache-control", "no-cache");
-
             var message = $"<Request><BusUpdate><StatusKeepalive>" +
                     $"<Duration>{duration}</Duration></StatusKeepalive></BusUpdate></Request>";
 
+            var request = new RestRequest($"/ExternalIntegrations/{channel}/Update", Method.POST);
+            request.AddHeader("content-type", "application/xml");
+            request.AddHeader("cache-control", "no-cache");
             request.AddParameter("application/xml", message, ParameterType.RequestBody);
-            var response = this.client.Execute(request);
 
-            if (response.StatusCode == HttpStatusCode.OK && response.Content == RioMessage.OK)
+            var response = Execute<RioResponse>(request);
+
+            if (response.Response == "OK")
             {
                 return true;
-            }
-
-            if (response.StatusCode == HttpStatusCode.Found)
-            {
-                this.IsConnected = false;
             }
 
             return false;
@@ -276,12 +222,14 @@ namespace RIO
             ServicePointManager.ServerCertificateValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12 | SecurityProtocolType.Ssl3;
 
-            return new RestClient(server)
-            {
-                CookieContainer = new CookieContainer(),
-                FollowRedirects = false,
-                //Timeout = this.ClientTimeout,
-            };
+            RestClient client = new RestClient(server);
+            client.CookieContainer = new CookieContainer();
+            client.FollowRedirects = false;
+            client.Timeout = this.ClientTimeout;
+            client.ClearHandlers();
+            client.UseDotNetXmlSerializer();
+
+            return client;
         }
     }
 }

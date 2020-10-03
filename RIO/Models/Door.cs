@@ -19,10 +19,10 @@ namespace RIO.Models
             this.Reader = reader;
         }
 
-        public string Channel { get; set; }
+        public string Channel { get; private set; }
 
-        public string Interface { get; set; }
+        public string Interface { get; private set; }
 
-        public string Reader { get; set; }
+        public string Reader { get; private set; }
     }
 }
