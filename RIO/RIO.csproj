@@ -42,11 +42,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Api.cs" />
-    <Compile Include="Classes\RioMessage.cs" />
+    <Compile Include="Models\RioMessage.cs" />
     <Compile Include="Models\Credential.cs" />
     <Compile Include="Models\Door.cs" />
     <Compile Include="Classes\Heartbeat.cs" />
-    <Compile Include="Classes\RioResponse.cs" />
+    <Compile Include="Models\RioResponse.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

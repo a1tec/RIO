@@ -5,8 +5,12 @@
 namespace RIO
 {
     using System;
+    using System.IO;
     using System.Net;
+    using System.Xml.Serialization;
     using RestSharp;
+    using RestSharp.Deserializers;
+    using RestSharp.Serialization.Xml;
     using RIO.Classes;
     using RIO.Models;
 
@@ -126,10 +130,15 @@ namespace RIO
 
             request.AddParameter("application/xml", message, ParameterType.RequestBody);
 
-            var response = this.client.Execute(request);
+            request.XmlSerializer = new RestSharp.Serializers.DotNetXmlSerializer(); //NEW
+
+            var response = this.client.Execute<RioResponse>(request);
+
+            
 
             if (response.StatusCode == HttpStatusCode.OK && response.Content == RioMessage.OK)
             {
+                Console.WriteLine(response.Data.Response);
                 return true;
             }
 
@@ -173,6 +182,9 @@ namespace RIO
 
         public bool SetInterfaceOnline(string channel, string @interface)
         {
+            this.client.ClearHandlers();
+            this.client.UseDotNetXmlSerializer();
+
             var request = new RestRequest($"/ExternalIntegrations/{channel}/Update", Method.POST);
             request.AddHeader("content-type", "application/xml");
             request.AddHeader("cache-control", "no-cache");
@@ -180,10 +192,21 @@ namespace RIO
                 "<IsConnected>True</IsConnected><SpecificDevices><None /></SpecificDevices>" +
                 "</SetConnected></BusUpdate></Request>";
             request.AddParameter("application/xml", message, ParameterType.RequestBody);
-            var response = this.client.Execute(request);
+            request.RequestFormat = DataFormat.Xml;
+            //var response = this.client.Execute(request);
 
-            if (response.StatusCode == HttpStatusCode.OK && response.Content == RioMessage.OK)
+            //request.XmlSerializer = new RestSharp.Serializers.DotNetXmlSerializer() { RootElement = "Response" }; //NEW            
+            //request.RootElement = "Response";
+
+            var response = this.client.Execute<RioResponse>(request);
+            
+
+            if (response.StatusCode == HttpStatusCode.OK)
             {
+                Console.WriteLine($"ContentType: {response.ContentType}");
+                //Console.WriteLine("Content: " + response.Content);
+                Console.WriteLine("Respuesta: " + response.Data.Response);
+
                 return true;
             }
 
@@ -191,6 +214,8 @@ namespace RIO
             {
                 this.IsConnected = false;
             }
+
+            throw new Exception(response.Content);
 
             return false;
         }
@@ -200,9 +225,9 @@ namespace RIO
             var request = new RestRequest($"/ExternalIntegrations/{channel}/Update", Method.POST);
             request.AddHeader("content-type", "application/xml");
             request.AddHeader("cache-control", "no-cache");
-            var message = "<Request><BusUpdate><SetConnected><Interface>{@interface}</Interface>" +
-                "<IsConnected>False</IsConnected><SpecificDevices><None /></SpecificDevices>" +
-                "</SetConnected></BusUpdate></Request>";
+            var message = $"<Request><BusUpdate><SetConnected><Interface>{@interface}</Interface>" +
+                $"<IsConnected>False</IsConnected><SpecificDevices><None /></SpecificDevices>" +
+                $"</SetConnected></BusUpdate></Request>";
             request.AddParameter("application/xml", message, ParameterType.RequestBody);
             var response = this.client.Execute(request);
 
@@ -215,6 +240,8 @@ namespace RIO
             {
                 this.IsConnected = false;
             }
+
+            throw new Exception(response.Content);
 
             return false;
         }

@@ -2,13 +2,21 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using System;
+using System.Xml.Serialization;
+
 namespace RIO.Classes
 {
+
+
+    //[XmlRoot(ElementName = "Response")]
+    //[Serializable]
+    [XmlRoot("Response")]
+    //[XmlElement("Response")]
     public class RioResponse
     {
-        public bool Status { get; set; }
-
-        public string ErrorMessage { get; set; }
+        [XmlText]
+        public string Response { get; set; }
     }
 
     public interface IRioResponse
@@ -18,6 +26,7 @@ namespace RIO.Classes
 
     public class Response : IRioResponse
     {
+        
         public string Message { get; set; }
     }
 }
